@@ -828,3 +828,27 @@ func TestDaemonUnixSockCleanedUp(t *testing.T) {
 
 	logDone("daemon - unix socket is cleaned up")
 }
+
+func TestRunContainerWithBridgeNone(t *testing.T) {
+	d := NewDaemon(t)
+
+	if err := d.StartWithBusybox("-b", "none"); err != nil {
+		t.Fatal(err)
+	}
+
+	ipListCmdStr := `ip link show | sed -n 's/^[0-9]*: *\(.*\):.*$/\1/p'`
+	out, _, err := runCommandWithOutput(exec.Command("sh", "-c", ipListCmdStr))
+	if err != nil {
+		t.Fatal(err, out)
+	}
+
+	out2, err := d.Cmd("run", "--net=host", "busybox", "sh", "-c", ipListCmdStr)
+	if err != nil {
+		t.Fatal(err, out2)
+	}
+	if out != out2 {
+		t.Fatalf("Host interfaces should list identically inside and outside the container\nHost:\n%s\nContainer:\n%s", out, out2)
+	}
+
+	logDone("daemon - run container with no bridge")
+}

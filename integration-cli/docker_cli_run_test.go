@@ -3234,6 +3234,21 @@ func TestRunNetHost(t *testing.T) {
 		t.Fatalf("Net namespace should be different without --net=host %s == %s\n", hostNet, out2)
 	}
 
+	ipListCmdStr := `ip link show | sed -n 's/^[0-9]*: *\(.*\):.*$/\1/p'`
+	out, _, err := runCommandWithOutput(exec.Command("sh", "-c", ipListCmdStr))
+	if err != nil {
+		t.Fatal(err, out)
+	}
+
+	cmd = exec.Command(dockerBinary, "run", "--net=host", "busybox", "sh", "-c", ipListCmdStr)
+	out2, _, err = runCommandWithOutput(cmd)
+	if err != nil {
+		t.Fatal(err, out2)
+	}
+	if out != out2 {
+		t.Fatalf("Host interfaces should list identically inside and outside the container\nHost:\n%s\nContainer:\n%s", out, out2)
+	}
+
 	logDone("run - net host mode")
 }
 
