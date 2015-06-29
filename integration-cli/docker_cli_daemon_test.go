@@ -1207,7 +1207,22 @@ func (s *DockerDaemonSuite) TestRunContainerWithBridgeNone(c *check.C) {
 	out, err := s.d.Cmd("run", "--rm", "busybox", "ip", "l")
 	c.Assert(err, check.IsNil, check.Commentf("Output: %s", out))
 	c.Assert(strings.Contains(out, "eth0"), check.Equals, false,
-		check.Commentf("There shouldn't be eth0 in container when network is disabled: %s", out))
+		check.Commentf("There shouldn't be eth0 in container when bridge is disabled: %s", out))
+	c.Assert(strings.Contains(out, "lo"), check.Equals, true,
+		check.Commentf("There should be loopback in container even without bridge: %s", out))
+
+	ipListCmdStr := `ip link show | sed -n 's/^[0-9]*: *\(.*\):.*$/\1/p'`
+	out, _, err = runCommandWithOutput(exec.Command("sh", "-c", ipListCmdStr))
+	if err != nil {
+		c.Fatal(err, out)
+	}
+
+	out2, err := s.d.Cmd("run", "--net=host", "busybox", "sh", "-c", ipListCmdStr)
+	if err != nil {
+		c.Fatal(err, out2)
+	}
+	c.Assert(out2, check.Equals, out,
+		check.Commentf("Host interfaces should list identically inside and outside the container"))
 }
 
 func (s *DockerDaemonSuite) TestDaemonRestartWithContainerRunning(t *check.C) {
